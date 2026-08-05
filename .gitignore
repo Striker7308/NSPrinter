@@ -1,0 +1,7 @@
+__pycache__/
+.idea/
+fonts/
+imgs/
+.env
+*.pdf
+*.txt
