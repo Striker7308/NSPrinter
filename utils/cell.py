@@ -1,3 +1,5 @@
+from doctest import debug
+
 from font import print_bold_text
 height_line = 8
 
@@ -15,22 +17,26 @@ def fill_cell(pdf, key, value, wk, wv, align='C', border=1, font_k='宋体', fon
     return
 
 def fill_cell_signature(pdf, key, value, wk, wv, align='C', border=1, font_k='宋体', font_size=15, font_v='hetang', print_no_key=False):
-    print('fill_cell_signature')
+    flag_debug = True
+
+    if flag_debug: print('fill_cell_signature')
     x, y = pdf.get_x(), pdf.get_y()
 
-    print(x, y)
+    if flag_debug: print(x, y)
     pdf.set_font(font_k, size=10)
 
     if print_no_key: wk = ''
     pdf.cell(wk, height_line, key, border=border, align=align)
 
+    x, y = pdf.get_x(), pdf.get_y()
+    pdf.set_xy(pdf.get_x(), y+5)
     pdf.set_font(font_v, size=font_size)
 
-    print(pdf.get_x(), pdf.get_y())
-    print_bold_text(pdf, pdf.get_x(), pdf.get_y(), '13641617308 2024-08-01 16:40:15')
+    if flag_debug: print(pdf.get_x(), pdf.get_y())
+    print_bold_text(pdf, pdf.get_x(), pdf.get_y(), value)
 
     # pdf.cell(wv, height_line, value, border=border)
-    pdf.ln(height_line)
+    pdf.ln(height_line/2)
     return
 
 def fill_cells(pdf, pair, wk, wv, align='C', border=1, new_line=True, print_no_key=False):
