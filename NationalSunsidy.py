@@ -91,8 +91,8 @@ def create_pdf_from_config(config, signature_img):
 
     # payment
     width_pay_key = 40
-    fill_cells(pdf, config['payment1'], width_info_key, width / 2 - width_pay_key, border=board, new_line=False, print_no_key=print_no_key)
-    fill_cells(pdf, config['payment2'], width_info_key, width / 2 - width_pay_key, border=board, new_line=False, print_no_key=print_no_key)
+    fill_cells(pdf, config['payment1'], width_info_key, width / 2 - width_pay_key, k_align='C', v_align='C', border=board, new_line=False, print_no_key=print_no_key)
+    fill_cells(pdf, config['payment2'], width_info_key, width / 2 - width_pay_key, k_align='C', v_align='C', border=board, new_line=False, print_no_key=print_no_key)
 
     start_x, start_y = pdf.get_x(), pdf.get_y()
     pdf.cell(width, 70, '', border=board)
@@ -138,7 +138,7 @@ def set_config_from_det(config, jiuxun, invoice, store):
 
     config["fields"]["SN码\n（家电及数码均需提供）"] = jiuxun['SN']
 
-    config["fields"]["收货地址\n（具体至门牌号）"] = store.get(jiuxun['销方公司名称'], {}).get('address', '未登记')
+    config["fields"]["收货地址\n（具体至门牌号）"] = store.get(jiuxun['销方公司名称'], {}).get('address', '未登记')+'(自提)'
 
     config["payment1"]["最终销售价格\n（POS单上原始金额）"] = jiuxun['实付金额']
     config["payment1"]["享受补贴资金数额\n（政府补贴金额）"] = jiuxun['补贴金额']
@@ -186,8 +186,9 @@ def set_config_from_det(config, jiuxun, invoice, store):
 #     return config
 
 def main():
+    root_dp = './imgs/国补订单附件20260806/'
     # root_dp = './imgs/国补订单附件2026072210210/'
-    root_dp = './imgs/国补订单附件-lv/'
+    # root_dp = './imgs/国补订单附件-lv/'
     # root_dp = './imgs/国补订单附件-rongyao/'
     # root_dp = './imgs/国补订单附件-qijian/'
     # root_dp = './imgs/国补订单附件-pinpai/'
