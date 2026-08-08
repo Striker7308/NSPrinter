@@ -2,7 +2,7 @@ import json
 import os.path
 import pathlib
 
-from fpdf import FPDF
+from fpdf.fpdf import FPDF
 from utils.cell import fill_signature_cell, fill_cells, fill_cell, fill_cell_signature
 from utils.filepath import find_invoice_fp, find_jiuxun_fp
 
@@ -45,7 +45,7 @@ def load_config(config_file="./config/content.json"):
 #     print()
 #     return id, receipt, invoice, signature_img
 
-def create_pdf_from_config(config, signature_img):
+def create_pdf_from_config_(config, signature_img):
     """write pdf using config parameters"""
     print_no_key = False
 
@@ -56,7 +56,87 @@ def create_pdf_from_config(config, signature_img):
 
     '''PDF'''
     # 简化版示例
-    pdf = FPDF()
+    pdf = FPDF(font_cache_dir=None)
+    pdf.add_page()
+    print('pdf.h', pdf.h)
+    print('pdf.w', pdf.w)
+
+    # load hand writing font
+    handwrite_font_fn = get_a_fonts()
+    # handwrite_font_fn = 'ProperScript-Regular.ttf'
+    handwrite_font_name = handwrite_font_fn.split('.')[0]
+
+    print('using handwrite ', handwrite_font_fn)
+    pdf.add_font('黑体', '', 'C:/Windows/Fonts/simhei.ttf')
+    pdf.add_font('宋体', '', 'C:/Windows/Fonts/simsun.ttc')
+    pdf.add_font(handwrite_font_name, '', './fonts/'+handwrite_font_fn)
+
+    # pdf.add_font('ChillZhuoKai', '', './fonts/ChillZhuoKai.ttf')
+    # pdf.add_font('slideyouran', '', './fonts/slideyouran-Regular.ttf')
+    # pdf.add_font('hetang', '', './fonts/荷塘月色手写体+Regular.ttf')
+
+    # set margin
+    pdf.set_left_margin(30)
+    if print_no_key: board = 0
+
+    # title
+    pdf.ln(10)
+    pdf.set_font('黑体', size=18)
+    pdf.cell(width, 10, config['title'], align='C')
+    pdf.ln(15)
+
+    # info
+    width_info_key = 40
+    fill_cells(pdf, config['fields'], width_info_key, width - width_info_key, border=board, print_no_key=print_no_key)
+
+    # payment
+    width_pay_key = 40
+    fill_cells(pdf, config['payment1'], width_info_key, width / 2 - width_pay_key, k_align='C', v_align='C', border=board, new_line=False, print_no_key=print_no_key)
+    fill_cells(pdf, config['payment2'], width_info_key, width / 2 - width_pay_key, k_align='C', v_align='C', border=board, new_line=False, print_no_key=print_no_key)
+
+    start_x, start_y = pdf.get_x(), pdf.get_y()
+    pdf.cell(width, 70, '', border=board)
+    pdf.set_xy(start_x, start_y)
+
+    # declare
+    pdf.set_font('黑体', size=11)
+    # pdf.set_font('花体', size=11)
+    fill_signature_cell(pdf, config['declaration'], width, height_line, print_no_key)
+    pdf.ln(10)
+
+    # sign
+    width_sign_key = 90
+    fill_cell_signature(pdf, '消费者姓名:', '', width_sign_key, width - width_sign_key, align='R', border=0, font_v=handwrite_font_name)
+    fill_cell_signature(pdf, '消费者电话:', config['signature']['消费者电话:'], width_sign_key, width - width_sign_key, align='R', border=0, font_v=handwrite_font_name)
+    fill_cell_signature(pdf, '签收时间:', config['signature']['签收时间:'], width_sign_key, width - width_sign_key, align='R', border=0, font_v=handwrite_font_name)
+
+    # config['signature'].pop('消费者姓名:')
+    print(config['signature'])
+    # fill_cells(pdf, config['signature'], width_sign_key, width - width_sign_key, align='R', border=0)
+    # pdf.image(signature_img)
+
+    width_order_id_key = 150
+
+    start_x, start_y = pdf.get_x(), pdf.get_y()
+    pdf.set_xy(start_x, start_y+5)
+    fill_cell(pdf, '', config['selling_store_id']+'-'+config['seller'], width_order_id_key, width - width_order_id_key, align='R', border=0, font_v='黑体', font_size=10)
+    fill_cell(pdf, '', config['selling_ord_id'], width_order_id_key, width - width_order_id_key, align='R', border=0, font_v='黑体',font_size=10)
+
+    return pdf
+
+def create_pdf_from_config(config, pdf=None):
+    """write pdf using config parameters"""
+    print_no_key = False
+
+    '''size'''
+    width = 150
+    height_line = 8
+    board = True
+
+    '''PDF'''
+    # 简化版示例
+    if not pdf:
+        pdf = FPDF()
     pdf.add_page()
     print('pdf.h', pdf.h)
     print('pdf.w', pdf.w)
@@ -186,7 +266,7 @@ def set_config_from_det(config, jiuxun, invoice, store):
 #     return config
 
 def main():
-    root_dp = './imgs/国补订单附件20260806/'
+    root_dp = './imgs/国补订单附件20260807/'
     # root_dp = './imgs/国补订单附件2026072210210/'
     # root_dp = './imgs/国补订单附件-lv/'
     # root_dp = './imgs/国补订单附件-rongyao/'
@@ -197,6 +277,7 @@ def main():
     root_dp = pathlib.Path(root_dp)
 
     store = load_store_config()
+    pdf_all = FPDF()
 
     for dp in root_dp.iterdir():
         if not dp.is_dir(): continue
@@ -216,13 +297,15 @@ def main():
         # print(json.dumps(config, indent=2, ensure_ascii=False))
 
         # signature_img = get_signature()
-        pdf = create_pdf_from_config(config, None)
+        pdf = create_pdf_from_config(config, pdf_all)
         # print(pdf)
-        pdf.output(str(dp)+'/output.pdf')
+        # pdf.output(str(dp)+'/output.pdf')
 
         '''build tax data'''
         tax = get_tax_json(jiuxun, invoice, store)
         json.dump(tax, open(str(dp)+'/tax.json', 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
+
+    pdf_all.output(str(root_dp)+'/output.pdf')
 
     return
 
