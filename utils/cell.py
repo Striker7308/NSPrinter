@@ -39,6 +39,42 @@ def fill_cell_signature(pdf, key, value, wk, wv, align='C', border=1, font_k='�
     pdf.ln(height_line/2)
     return
 
+def fill_cells_(pdf, pair, wk, wv, k_align='C', v_align='L', border=1, new_line=True, print_no_key=False):
+    pdf.set_font('宋体', size=10)
+    x, y = pdf.get_x(), pdf.get_y()
+
+    for label, value in pair.items():
+        # print(label, value)
+        lines = label.split('\n')
+        n = len(lines)
+
+        # Key
+        pdf.cell(wk, height_line * n, '', border=border)
+        for i, line in enumerate(lines):
+            if print_no_key: line = ''
+            pdf.set_xy(x, y + i * height_line)
+            pdf.cell(wk, height_line, line, border=0, align=k_align)
+
+        # Value
+        # pdf.set_xy(pdf.get_x(), pdf.get_y() - (n - 1) * height_line)
+        # pdf.cell(wv, height_line * n, value, border=border, align=v_align)
+
+        n_v = 0
+        pdf.cell(wv, height_line * n, '', border=border)
+        for i, line in enumerate(lines):
+            if print_no_key: line = ''
+            pdf.set_xy(x, y + i * height_line)
+            pdf.cell(wk, height_line, line, border=0, align=k_align)
+
+        if new_line:
+            pdf.ln(height_line * n)
+            x, y = pdf.get_x(), pdf.get_y()
+        else:
+            x += wk + wv
+            y = pdf.get_y()
+    if not new_line: pdf.ln(height_line*n)
+    return x, y
+
 def fill_cells(pdf, pair, wk, wv, k_align='C', v_align='L', border=1, new_line=True, print_no_key=False):
     pdf.set_font('宋体', size=10)
     x, y = pdf.get_x(), pdf.get_y()

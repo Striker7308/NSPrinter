@@ -202,8 +202,6 @@ def create_pdf_from_config(config, pdf=None):
     fill_cell(pdf, '', config['selling_store_id']+'-'+config['seller'], width_order_id_key, width - width_order_id_key, align='R', border=0, font_v='黑体', font_size=10)
     fill_cell(pdf, '', config['selling_ord_id'], width_order_id_key, width - width_order_id_key, align='R', border=0, font_v='黑体',font_size=10)
 
-    return pdf
-
 
 def set_config_from_det(config, jiuxun, invoice, store):
     if jiuxun['分类'] == '笔记本电脑': config["title"] = '2026年陕西省家电以旧换新补贴确认书'
@@ -266,7 +264,7 @@ def set_config_from_det(config, jiuxun, invoice, store):
 #     return config
 
 def main():
-    root_dp = './imgs/国补订单附件20260807/'
+    root_dp = './imgs/国补订单附件20260811/'
     # root_dp = './imgs/国补订单附件2026072210210/'
     # root_dp = './imgs/国补订单附件-lv/'
     # root_dp = './imgs/国补订单附件-rongyao/'
@@ -296,8 +294,12 @@ def main():
         set_config_from_det(config, jiuxun, invoice, store)
         # print(json.dumps(config, indent=2, ensure_ascii=False))
 
+        pdf_single = FPDF()
+        create_pdf_from_config(config, pdf_single)
+        pdf_single.output(str(dp) + '/confirmation.pdf')
+
         # signature_img = get_signature()
-        pdf = create_pdf_from_config(config, pdf_all)
+        create_pdf_from_config(config, pdf_all)
         # print(pdf)
         # pdf.output(str(dp)+'/output.pdf')
 
@@ -305,7 +307,7 @@ def main():
         tax = get_tax_json(jiuxun, invoice, store)
         json.dump(tax, open(str(dp)+'/tax.json', 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
 
-    pdf_all.output(str(root_dp)+'/output.pdf')
+    pdf_all.output(str(root_dp)+'/confirmation.pdf')
 
     return
 
