@@ -5,3 +5,6 @@ imgs/
 .env
 *.pdf
 *.txt
+*.jpg
+*.jpeg
+*.png

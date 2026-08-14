@@ -4,14 +4,16 @@ from OCR import client, model
 from PIL import Image, ImageDraw, ImageEnhance
 import base64
 
+from utils.format import image_to_openai_b64
+
 def get_sn(img_fp):
-    fo = open(img_fp, "rb")
-    image_base64 = base64.b64encode(fo.read()).decode("utf-8")
-    image_format = Image.open(img_fp).format.lower()
+    flag_debug = False
+    openai_b64 = image_to_openai_b64(img_fp)
+
     messages = [{
         "role": "user",
         "content":
-            [{"type": "image_url","image_url": f"data:image/{image_format};base64,{image_base64}"},
+            [{"type": "image_url","image_url": openai_b64},
             {"type": "text", "text": "提取IMEI1，IMEI2，SN码，严格按照 {\"IMEI1\": , \"IMEI2\": , \"SN\": }json格式返回"}]
     }]
 
@@ -27,6 +29,7 @@ def get_sn(img_fp):
         model=model,
     )
     content = completion.choices[0].message.content
+    if flag_debug: print(content)
     sn_json = json.loads(content)
     return sn_json
 

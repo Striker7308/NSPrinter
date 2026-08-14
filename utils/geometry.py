@@ -1,4 +1,4 @@
-import os
+import os, io
 import cv2
 import numpy as np
 from PIL import Image
@@ -115,3 +115,32 @@ def format_barcodes(barcodes):
         key=lambda b: get_barcode_center(b)[::-1]
     )
     return barcodes_sorted
+
+def resize_for_doubao_(image: Image.Image, max_total_pixels=36000000) -> bytes:
+    w, h = image.size
+    total = w * h
+    if total <= max_total_pixels:
+        buf = io.BytesIO()
+        image.save(buf, format="JPEG", quality=85)
+        return buf.getvalue()
+
+    # 计算缩放比例
+    scale = (max_total_pixels / total) ** 0.5
+    new_w = int(w * scale)
+    new_h = int(h * scale)
+    resized = image.resize((new_w, new_h), Image.Resampling.LANCZOS)
+
+    buf = io.BytesIO()
+    resized.save(buf, format="JPEG", quality=85)
+    return buf.getvalue()
+
+def resize_for_doubao(img, max_total_pixels=36000000-1000):
+    w, h = img.size
+    resolution = w * h
+    if resolution <= max_total_pixels:
+        return img
+
+    scale = (max_total_pixels / resolution) ** 0.5
+    new_w, new_h = int(w * scale), int(h * scale)
+    resized = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+    return resized

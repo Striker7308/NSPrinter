@@ -4,17 +4,20 @@ from OCR import client, model
 from PIL import Image, ImageDraw, ImageEnhance
 import base64
 
+from utils.format import image_to_openai_b64
 
-def get_id(img_fp_id):
+
+def get_id(img_fp):
+    flag_debug = False
     id = {}
-    fo = open(img_fp_id, "rb")
-    image_base64 = base64.b64encode(fo.read()).decode("utf-8")
-    image_format = Image.open(img_fp_id).format.lower()
+
+    if flag_debug: print(img_fp)
+    openai_b64 = image_to_openai_b64(img_fp)
     messages = [{
         "role": "user",
         "content":
-            [{"type": "image_url","image_url": f"data:image/{image_format};base64,{image_base64}"},
-            {"type": "text", "text": "照片是身份证吗,不是的话,只返回None, 如果是,提取姓名和身份证号,json格式返回"}]
+            [{"type": "image_url","image_url": openai_b64},
+            {"type": "text", "text": "照片是身份证吗,不是的话,只返回No, 如果是,提取姓名和身份证号,json格式返回"}]
     }]
 
     extra_body = {"thinking": {"type": "disabled"}}
@@ -29,8 +32,8 @@ def get_id(img_fp_id):
         model=model,
     )
     content = completion.choices[0].message.content
-    # print(content)
-    if content == 'None': return {
+    if flag_debug: print(content)
+    if content == 'No': return {
         'name': '不识别',
         'num': '不识别',
     }
