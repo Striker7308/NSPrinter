@@ -17,6 +17,51 @@ def get_invoice(invoice_fp):
     invoice = parse_invoice_qr(results[0].text)
     return invoice
 
+def get_invoice_input(store, jiuxun, id, receipt, checking):
+    if len(checking) == 0: return []
+    invoice_input_list = [
+        jiuxun['销方公司名称'] if checking['刷卡门店'] is True else 'xxxxxx销方公司名称错误xxxxxx',
+        jiuxun['联系人'] if checking['联系人'] is True else 'xxxxxx联系人错误xxxxxx',
+        id['num'] if checking['联系人'] is True else 'xxxxxx联系人错误xxxxxx',
+        jiuxun['分类'],
+        jiuxun['商品名称'],
+        jiuxun['规格'],
+        jiuxun['实付金额'],
+    ]
+
+    remark = '2026 年商洛市数码和智能产品购新, 购买方地址: '
+    remark += store[jiuxun['销方公司名称']]['address']+', '
+    remark += '最终销售价格: '+jiuxun['实付金额']+'元, '
+    remark += '享受补贴资金数额: '+receipt['national_saving']+'元, '
+    remark += '其他优惠金额: '+receipt.get('bank_saving', '0.00')+'元, '
+    remark += '消费者实际支付金额: '+receipt['pay']+'元, '
+    remark += '消费者手机号: '+jiuxun['联系人电话']
+    invoice_input_list.append(remark)
+
+    return invoice_input_list
+
+def get_invoice_input_(store, jiuxun, id, receipt):
+    invoice_input_list = [
+        jiuxun['销方公司名称'],
+        jiuxun['联系人'],
+        id['num'],
+        jiuxun['分类'],
+        jiuxun['商品名称'],
+        jiuxun['规格'],
+        jiuxun['实付金额'],
+    ]
+
+    remark = '2026 年商洛市数码和智能产品购新, 购买方地址: '
+    remark += store[jiuxun['销方公司名称']]['address']+', '
+    remark += '最终销售价格: '+jiuxun['实付金额']+'元, '
+    remark += '享受补贴资金数额: '+receipt['national_saving']+'元, '
+    remark += '其他优惠金额: '+receipt.get('bank_saving', '0.00')+'元, '
+    remark += '消费者实际支付金额: '+receipt['pay']+'元, '
+    remark += '消费者手机号: '+jiuxun['联系人电话']
+    invoice_input_list.append(remark)
+
+    return invoice_input_list
+
 def test_invoice():
     print(f"支持的格式: {zxingcpp.barcode_formats_list()}")
 

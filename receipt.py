@@ -161,7 +161,7 @@ def get_rich_txt_by_Doubao(img_rich_txt):
     image_ref_file = './imgs/ref/re.jpg'
     img_ref = Image.open(image_ref_file)
     barcodes_ref = decode_qr(img_ref)
-    draw_bbox(img=img_ref, barcodes=barcodes_ref, fp='./ref_bbox.jpg')
+    if flag_debug: draw_bbox(img=img_ref, barcodes=barcodes_ref, fp='./ref_bbox.jpg')
     img_ref_rich_txt = get_receipt_rich_txt_img(img_ref, barcodes_ref[2], barcodes_ref[3])
     if flag_debug: img_ref_rich_txt.save('./ref_rich_txt.jpg')
 

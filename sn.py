@@ -4,11 +4,14 @@ from OCR import client, model
 from PIL import Image, ImageDraw, ImageEnhance
 import base64
 
-from utils.format import image_to_openai_b64
+from utils.format import image_to_openai_b64, img2openai_b64
+from utils.geometry import resize_for_doubao
 
 def get_sn(img_fp):
     flag_debug = False
-    openai_b64 = image_to_openai_b64(img_fp)
+    img = Image.open(img_fp)
+    img = resize_for_doubao(img)
+    openai_b64 = img2openai_b64(img)
 
     messages = [{
         "role": "user",

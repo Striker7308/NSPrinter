@@ -4,15 +4,18 @@ from OCR import client, model
 from PIL import Image, ImageDraw, ImageEnhance
 import base64
 
-from utils.format import image_to_openai_b64
-
+from utils.format import image_to_openai_b64, img2openai_b64
+from utils.geometry import resize_for_doubao
 
 def get_id(img_fp):
     flag_debug = False
-    id = {}
+    id_json = {}
 
     if flag_debug: print(img_fp)
-    openai_b64 = image_to_openai_b64(img_fp)
+    img = Image.open(img_fp)
+    img = resize_for_doubao(img)
+    openai_b64 = img2openai_b64(img)
+
     messages = [{
         "role": "user",
         "content":
@@ -37,12 +40,12 @@ def get_id(img_fp):
         'name': '不识别',
         'num': '不识别',
     }
-    id_json = json.loads(content)
-    for k, v in id_json.items():
-        if k.find('名') != -1: id['name'] = v
-        if k.find('号') != -1: id['num'] = v
-    assert len(id["num"]) == 18
-    return id
+    id_det = json.loads(content)
+    for k, v in id_det.items():
+        if k.find('名') != -1: id_json['name'] = v
+        if k.find('号') != -1: id_json['num'] = v
+    assert len(id_json["num"]) == 18
+    return id_json
 
 
 def test_id():

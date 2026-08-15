@@ -11,3 +11,9 @@ def image_to_openai_b64(img_fp: str) -> str:
         raw = buf.getvalue()
     b64 = base64.b64encode(raw).decode("utf‑8").replace("\n","").replace("\r","").strip()
     return f"data:image/jpeg;base64,{b64}"
+
+def img2openai_b64(img):
+    buffer = io.BytesIO()
+    img.save(buffer, format='JPEG')
+    b64 = base64.b64encode(buffer.getvalue()).decode()
+    return f"data:image/jpeg;base64,{b64}"
