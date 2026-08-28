@@ -108,7 +108,7 @@ def parse_invoice_qr(qr_string):
         "total_amount_including_tax": parts[4],
         "issue_date": parts[5],
         "verification_code": parts[6],
-        "short_checksum_code": parts[7],
+        "union_pay_short_checksum_code": parts[7],
     }
     return result
 

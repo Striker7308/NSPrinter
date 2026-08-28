@@ -40,7 +40,12 @@ def get_id(img_fp):
         'name': '不识别',
         'num': '不识别',
     }
-    id_det = json.loads(content)
+    try:
+        id_det = json.loads(content)
+    except Exception as e:
+        print(e)
+        return {'识别错误': content}
+
     for k, v in id_det.items():
         if k.find('名') != -1: id_json['name'] = v
         if k.find('号') != -1: id_json['num'] = v

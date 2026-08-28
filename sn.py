@@ -9,6 +9,7 @@ from utils.geometry import resize_for_doubao
 
 def get_sn(img_fp):
     flag_debug = False
+    if img_fp is None: return {}
     img = Image.open(img_fp)
     img = resize_for_doubao(img)
     openai_b64 = img2openai_b64(img)
@@ -33,7 +34,11 @@ def get_sn(img_fp):
     )
     content = completion.choices[0].message.content
     if flag_debug: print(content)
-    sn_json = json.loads(content)
+    try:
+        sn_json = json.loads(content)
+    except Exception as e:
+        print(e)
+        return {'识别错误': content}
     return sn_json
 
 
