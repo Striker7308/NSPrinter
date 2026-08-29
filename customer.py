@@ -7,7 +7,8 @@ import json
 
 def report_to_done_order(fp):
     # seller2wecom_id = json.load(open('./config/seller2wecomID.json', 'r', encoding='utf-8'))
-    feb = datetime(2026, 2, 15)
+    feb = datetime(2026, 5, 15)
+    # feb = datetime(2026, 2, 15)
 
     dp_xlsx = pathlib.Path(fp)
     to_done_xlsx = pd.read_excel(dp_xlsx)
@@ -36,6 +37,9 @@ def report_to_done_order(fp):
     return
 
 def main():
+    # report_to_done_order('./imgs/huawei_pura_customer_all.xlsx')
+    # report_to_done_order('./imgs/huawei_mate_customer_all.xlsx')
+    # report_to_done_order('./imgs/honor_customer_all.xlsx')
     report_to_done_order('./imgs/apple_customer_all.xlsx')
     return
 
