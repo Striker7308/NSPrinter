@@ -1,4 +1,6 @@
 import json
+import pathlib
+from utils.filepath import find_jiuxun_fp
 
 def get_product_detail(jiuxun):
     # 商品名称：一加 Turbo 6（PLU110）全网通5G版 金币版
@@ -28,6 +30,12 @@ def get_jiuxun_info(fp='./imgs/国补订单附件-pinpai/10224732（未审核）
 
     if flag_debug: print(json.dumps(jiuxun, indent=2, ensure_ascii=False))
 
+    return jiuxun
+
+def get_jiuxun(dp):
+    dp = pathlib.Path(dp)
+    jiuxun_fp = find_jiuxun_fp(dp)
+    jiuxun = get_jiuxun_info(jiuxun_fp)
     return jiuxun
 
 def main():

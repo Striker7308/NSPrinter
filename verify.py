@@ -13,7 +13,7 @@ from id import get_id
 from receipt import get_receipt, get_signature, get_rich_txt_by_Doubao
 from sn import get_sn
 from invoice import get_invoice, get_invoice_input
-from jiuxun_info import get_jiuxun_info, get_product_detail
+from jiuxun_info import get_jiuxun_info, get_product_detail, get_jiuxun
 from store import load_store_config
 
 def load_config(config_file="./config/content.json"):
@@ -25,7 +25,6 @@ def get_det(dp='./imgs/10219792（未审核）/'):
 
     id_fp = find_id_fp(dp)
     phone_case_re_fp = '验机激活四码合一照片.jpg'
-    jiuxun_fp = find_jiuxun_fp(dp)
     # in_fp = find_invoice_fp(dp)
 
     id = get_id(id_fp)
@@ -39,8 +38,6 @@ def get_det(dp='./imgs/10219792（未审核）/'):
     # receipt, signature_img = get_receipt(dp+re_fp)
     json.dump(receipt, open(str(dp) + '/receipt.json', 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
 
-    jiuxun = get_jiuxun_info(jiuxun_fp)
-
     invoice = {}
     # invoice = get_invoice(in_fp)
 
@@ -53,7 +50,7 @@ def get_det(dp='./imgs/10219792（未审核）/'):
     # print('invoice')
     # print(json.dumps(invoice, indent=2, ensure_ascii=False))
     # print()
-    return id, phone, receipt, invoice, jiuxun
+    return id, phone, receipt, invoice
 
 def check_store_info(store, receipt, jiuxun):
     return {
@@ -77,10 +74,12 @@ def check_payment(receipt, jiuxun):
     } if len(receipt) > 0 else {'实付金额': '未识别到小票', '政府补贴': '未识别到小票', '信用卡优惠': '未识别到小票', '实际支付': '未识别到小票'}
 
 def check_merchandise_info(phone, receipt, jiuxun):
-    # match_sn = phone['SN'] = jiuxun['SN']
+    match_sn = phone['SN'] == jiuxun['SN']
+    match_sn = phone['SN'].replace('0', 'Q') == jiuxun['SN'] if not match_sn else match_sn
     return {
+        'SN': match_sn if phone.get('SN', '') == jiuxun['SN'] else '识别到 手机屏显SN '+phone.get('SN', '')+' 与 九讯云上SN '+jiuxun['SN']+' 不一致',
         # 'SN有误': True if phone['SN'] == receipt['phone_info']['SN'] else "手机显示SN-"+phone['SN']+' 与 '+'小票显示SN-'+receipt['phone_info']['SN'] + ' 不一致',
-        'SN': True if phone.get('SN', '') == jiuxun['SN'] else '识别到 手机屏显SN '+phone.get('SN', '')+' 与 九讯云上SN '+jiuxun['SN'] + ' 不一致',
+        # 'SN': True if phone.get('SN', '') == jiuxun['SN'] else '识别到 手机屏显SN '+phone.get('SN', '')+' 与 九讯云上SN '+jiuxun['SN'] + ' 不一致',
         # 'IMEI1有误': True if phone['IMEI1'] == receipt['phone_info']['IMEI1'] else "手机显示IMEI1-"+phone['SN']+' ?= '+'小票显示IMEI1-'+receipt['phone_info']['SN'],
         'IMEI1': True if jiuxun['分类'] != '智能手机' or phone.get('IMEI1', '') == jiuxun['序列号'] else '手机屏显IMEI1 '+phone.get('IMEI1', '')+' 与 九讯云上IMEI1 '+jiuxun['序列号'] + ' 不一致',
         # 'IMEI2有误': True if phone['IMEI2'] == receipt['phone_info']['IMEI2'] else "手机显示SN-"+phone['IMEI2']+' ?= '+'小票显示SN-'+receipt['phone_info']['IMEI2'],
@@ -94,21 +93,24 @@ def check_one_day(day_dp):
     error_list = json.load(open(orders_dp.joinpath('error_list.json'), 'r', encoding='utf-8')) if orders_dp.joinpath('error_list.json').is_file() else {}
     for dp in orders_dp.iterdir():
         order_id_dp = dp.name.split('（')[0]
-        if not dp.is_dir() or error_list.get(order_id_dp, None) == 'check':
-            print(dp, 'check')
-            continue
+        # if not dp.is_dir() or error_list.get(order_id_dp, None) == 'check':
+        #     print(dp, 'check')
+        #     continue
 
-        # if not dp.is_dir():
-        #     continue
-        # if order_id_dp != '10232305':
-        #     print(dp, 'ignore')
-        #     continue
+        if not dp.is_dir():
+            continue
+        if order_id_dp != '10232878':
+            print(dp, 'ignore')
+            continue
 
         print(dp, 'checking')
 
         try:
+            '''read jiuxun first'''
+            jiuxun = get_jiuxun(dp)
+
             '''read data multimodality'''
-            id, phone, receipt, invoice, jiuxun = get_det(dp)
+            id, phone, receipt, invoice = get_det(dp)
 
             '''check data match by rule'''
             checking = check_store_info(store, receipt, jiuxun)

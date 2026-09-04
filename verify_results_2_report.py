@@ -1,6 +1,7 @@
 import json
 import pathlib
 import argparse
+from utils.io import dump_list_txt, load_list_txt
 
 def transfer(orders_dp):
     orders_dp = pathlib.Path(orders_dp)
@@ -9,11 +10,15 @@ def transfer(orders_dp):
 
     for order_id, status in error_list.items():
         if status != 'check':
-            print(str('订单号: '+ order_id))
-            for type_, error_ in status.items():
-                print(str(type_+': '+error_).replace('!=', '不等于'))
-
-    json.dump(error_list, open(orders_dp.joinpath('report.txt'), 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
+            report.append(str('订单号: '+ order_id))
+            if type(status) == dict:
+                for type_, error_ in status.items():
+                    report.append(str(type_+': '+error_).replace('!=', '不等于'))
+            else:
+                report.append(str(status))
+            report.append('')
+    dump_list_txt(report, orders_dp.joinpath('report.txt'))
+    # json.dump(error_list, open(orders_dp.joinpath('report.txt'), 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
     return
 
 def main():
