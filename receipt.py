@@ -4,6 +4,7 @@ import os, io
 import re
 import json
 import pathlib
+import warnings
 
 import cv2
 from openai import OpenAI
@@ -134,25 +135,32 @@ def parse_device_info(text):
     result = {"name": name}
 
     # SN
-    sn_match = re.search(r'SN:([^,]+)', info)
+    sn_match = re.search(r'SN(?:号)?\s*:\s*([^,]+)', info)
     if sn_match:
         result["SN"] = sn_match.group(1)
+    else:
+        warnings.warn("SN not found in info")
 
     # IMEI_1
     imei1_match = re.search(r'IMEI_1:([^,]+)', info)
     if imei1_match:
         result["IMEI1"] = imei1_match.group(1)
+    else:
+        warnings.warn("IMEI_1 not found in info")
 
     # IMEI_2
     imei2_match = re.search(r'IMEI_2:([^,]+)', info)
     if imei2_match:
         result["IMEI2"] = imei2_match.group(1)
+    else:
+        warnings.warn("IMEI_2 not found in info")
 
     # type
     type_match = re.search(r'型号:([^,]+)', info)
     if type_match:
         result["type"] = type_match.group(1)
-
+    else:
+        warnings.warn("product type not found in info")
     return result
 
 def get_rich_txt_by_Doubao(img_rich_txt):
@@ -218,9 +226,15 @@ def get_rich_txt_by_Doubao(img_rich_txt):
     if not (receipt_txt_json.get('商品', False) or receipt_txt_json.get('第三方优惠说明', False)):
         return {}
 
+
     receipt_txt_json['phone_info'] = parse_device_info(receipt_txt_json.get('商品', ''))
 
-    if flag_debug: print('第三方优惠说明:')
+    if flag_debug:
+        print('商品:')
+        print(receipt_txt_json.get('商品', ''))
+        print('phone_info:')
+        print(receipt_txt_json['phone_info'])
+        print('第三方优惠说明:')
     for i, (key, value) in enumerate(receipt_txt_json.get('第三方优惠说明', {}).items()):
         if flag_debug: print('  ',key, value)
         if i == 0:
