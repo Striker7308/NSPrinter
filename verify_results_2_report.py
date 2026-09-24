@@ -8,15 +8,18 @@ def transfer(orders_dp):
     error_list = json.load(open(orders_dp.joinpath('error_list.json'), 'r', encoding='utf-8')) if orders_dp.joinpath('error_list.json').is_file() else {}
     report = []
 
+    report.append(orders_dp.name[-8:]+' 挂单检查')
+    report.append('')
     for order_id, status in error_list.items():
         if status != 'check':
-            report.append(str('订单号: '+ order_id))
+            report.append(str('订单号: '+order_id))
             if type(status) == dict:
                 for type_, error_ in status.items():
-                    report.append(str(type_+': '+error_).replace('!=', '不等于'))
+                    report.append(str(type_+': '+error_).replace('!=', '不等于').replace('seller: ', '销售人: '))
             else:
                 report.append(str(status))
             report.append('')
+    report.append('尽快核实国补资料')
     dump_list_txt(report, orders_dp.joinpath('report.txt'))
     # json.dump(error_list, open(orders_dp.joinpath('report.txt'), 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
     return

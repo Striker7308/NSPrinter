@@ -107,11 +107,11 @@ def check_one_day(day_dp):
             print(dp, 'check')
             continue
 
-        if not dp.is_dir():
-            continue
-        if order_id_dp != '10236942':
-            print(dp, 'ignore')
-            continue
+        # if not dp.is_dir():
+        #     continue
+        # if order_id_dp != '10236942':
+        #     print(dp, 'ignore')
+        #     continue
 
         print(dp, 'checking')
 
