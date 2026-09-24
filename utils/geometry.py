@@ -109,12 +109,20 @@ def get_barcode_center(bar):
     cy = (tl.y + br.y) / 2.0
     return (cx, cy)
 
+
 def format_barcodes(barcodes):
+    barcode_txt = {'combined': '', 'code002026': '', 'code89': ''}
     barcodes_sorted = sorted(
         barcodes,
         key=lambda b: get_barcode_center(b)[::-1]
     )
-    return barcodes_sorted
+    # for barcode in barcodes:
+    #     print(barcode.text)
+    barcode_txt['combined'] = next((barcode.text for barcode in barcodes if '+' in barcode.text), "")
+    barcode_txt['code002026'] = next((barcode.text for barcode in barcodes if '002026' in barcode.text and '+' not in barcode.text), "")
+    barcode_txt['code89'] = next((barcode.text for barcode in barcodes if '89' in barcode.text and '+' not in barcode.text), "")
+    return barcode_txt, barcodes_sorted
+
 
 def resize_for_doubao_(image: Image.Image, max_total_pixels=36000000) -> bytes:
     w, h = image.size

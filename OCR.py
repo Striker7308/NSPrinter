@@ -14,7 +14,8 @@ load_dotenv()
 llm_config = {
     "base_url": "https://ark.cn-beijing.volces.com/api/v3",
     "api_key": os.getenv("VOLC_ARK_API_KEY"),
-    "model": "doubao-seed-1-8-251228"
+    "model": "doubao-seed-2-0-mini-260428"
+    # "model": "doubao-seed-1-8-251228"
 }
 
 base_url = llm_config.get("base_url")

@@ -16,6 +16,7 @@ from utils.geometry import polygon_to_xyxy, transform_polygon, clean_signature_t
 from utils.format import image_to_openai_b64, extract_float
 from OCR import client, model
 
+
 def draw_bbox(img, barcodes, fp='./re_bbox.jpg'):
     flag_debug = False
     if flag_debug:
@@ -155,19 +156,20 @@ def parse_device_info(text):
 
     return result
 
-def get_rich_txt_by_Doubao(img_rich_txt):
+def get_rich_txt_by_Doubao(img_receipt):
     flag_debug = False
+    qrcodes_txt, qrcodes = decode_qr(img_receipt)
 
     image_ref_file = './imgs/ref/re.jpg'
     img_ref = Image.open(image_ref_file)
-    barcodes_ref = decode_qr(img_ref)
+    qrcodes_txt_ref, barcodes_ref = decode_qr(img_ref)
     if flag_debug: draw_bbox(img=img_ref, barcodes=barcodes_ref, fp='./ref_bbox.jpg')
     img_ref_rich_txt = get_receipt_rich_txt_img(img_ref, barcodes_ref[2], barcodes_ref[3])
     if flag_debug: img_ref_rich_txt.save('./ref_rich_txt.jpg')
 
     buffer = io.BytesIO()
-    img_rich_txt = resize_for_doubao(img_rich_txt)
-    img_rich_txt.save(buffer, format='JPEG')
+    img_receipt = resize_for_doubao(img_receipt)
+    img_receipt.save(buffer, format='JPEG')
     image_base64 = base64.b64encode(buffer.getvalue()).decode()
     image_format = 'jpeg'
 
@@ -196,7 +198,10 @@ def get_rich_txt_by_Doubao(img_rich_txt):
             {"type": "text", "text": prompt_text},
         ]
     }]
-    extra_body = {"thinking": {"type": "disabled"}}
+    extra_body = {
+        "thinking": {"type": "disabled"},
+        "reasoning_effort": "minimal"
+    }
 
     completion = client.chat.completions.create(
         extra_body=extra_body,
@@ -210,25 +215,26 @@ def get_rich_txt_by_Doubao(img_rich_txt):
     if flag_debug: print('respond content:\n', rich_txt)
     rich_txt = rich_txt.replace('\\n', '')
     try:
-        receipt_txt_json = json.loads(rich_txt)
+        receipt_json = json.loads(rich_txt)
     except Exception as e:
         print(e)
-        receipt_txt_json = {'识别错误': rich_txt}
+        receipt_json = {'识别错误': rich_txt}
     '''check key content'''
-    if not (receipt_txt_json.get('商品', False) or receipt_txt_json.get('第三方优惠说明', False)):
+    if not (receipt_json.get('商品', False) or receipt_json.get('第三方优惠说明', False)):
         return {}
 
-    receipt_txt_json['phone_info'] = parse_device_info(receipt_txt_json.get('商品', ''))
+    receipt_json['qrcode'] = qrcodes_txt
+    receipt_json['phone_info'] = parse_device_info(receipt_json.get('商品', ''))
 
     if flag_debug: print('第三方优惠说明:')
-    for i, (key, value) in enumerate(receipt_txt_json.get('第三方优惠说明', {}).items()):
+    for i, (key, value) in enumerate(receipt_json.get('第三方优惠说明', {}).items()):
         if flag_debug: print('  ',key, value)
         if i == 0:
-            receipt_txt_json['pay'] = extract_float(value)
+            receipt_json['pay'] = extract_float(value)
         elif i == 1:
-            receipt_txt_json['national_saving'] = extract_float(value)
+            receipt_json['national_saving'] = extract_float(value)
         elif i == 2:
-            receipt_txt_json['bank_saving'] = extract_float(value)
+            receipt_json['bank_saving'] = extract_float(value)
     # for key, value in receipt_txt_json['第三方优惠说明'].items():
     #     print(key, value)
     #     if key.find('支付') != -1:
@@ -243,7 +249,7 @@ def get_rich_txt_by_Doubao(img_rich_txt):
     #         receipt_txt_json['bank_saving'] = value
     #     else:
     #         raise KeyError(key+' not in receipt pay and saving info key')
-    return receipt_txt_json
+    return receipt_json
 
 def get_signature(img_fp='imgs/0/re.jpg'):
     img = Image.open(img_fp)
@@ -259,8 +265,8 @@ def get_receipt(image_file):
     img = Image.open(image_file)
     if flag_debug: img.save('./re.jpg')
 
-    barcodes = decode_qr(img)
-    if len(barcodes) != 5: print('decoding fail, img fp', image_file)
+    barcodes_txt, barcodes = decode_qr(img)
+    if len(barcodes) != 5: print('qr decoding fail, img fp', image_file)
     if flag_debug:
         print(image_file)
         # print(len(barcodes))
@@ -279,11 +285,11 @@ def get_receipt(image_file):
     receipt_txt_json = get_rich_txt_by_Doubao(img_rich_txt)
     if flag_debug: print(json.dumps(receipt_txt_json, indent=2, ensure_ascii=False))
 
-
     img_signature = get_receipt_signature(img, barcodes[2], barcodes[3])
     signature_img = clean_signature_to_binary(img_signature)
 
     return {**receipt_qrcode_json, **receipt_txt_json}, signature_img
+
 
 def get_receipt_prcode(image_file):
     flag_debug = False
@@ -291,8 +297,8 @@ def get_receipt_prcode(image_file):
 
     # img = cv2.imread(image_file)
     # if flag_debug: cv2.imwrite('./re.jpg', img)
-    decode_qr(img)
-    return
+    barcodes_txt, barcodes = decode_qr(img)
+    return barcodes_txt
 
 def test_signature():
     image_file = './imgs/ref/re.jpg'
@@ -369,7 +375,8 @@ def test_receipt_directly_by_doubao():
 def test_receipt_qrcod_and_doubao():
     # print(f"支持的格式: {zxingcpp.barcode_formats_list()}")
 
-    root_dp = './imgs/all/'
+    root_dp = 'E:/share/国补订单附件20260922/'
+    # root_dp = './imgs/all/'
     # root_dp = './imgs/国补订单附件20260730/'
     # root_dp = './imgs/国补订单附件2026072119282/'
     # root_dp = './imgs/国补订单附件2026072210210/'
@@ -385,6 +392,7 @@ def test_receipt_qrcod_and_doubao():
 
     for dp in root_dp.iterdir():
         if not dp.is_dir(): continue
+        if dp.name != '10236734（未审核）': continue
 
         image_file = dp.joinpath('销售小票及刷卡小票.jpg')
         print(image_file)

@@ -36,6 +36,7 @@ def decode_qr_robust(img):
 
     return
 
+
 def decode_qr(img):
     # print(f"支持的格式: {zxingcpp.barcode_formats_list()}")
     flag_debug = False

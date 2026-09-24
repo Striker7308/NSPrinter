@@ -24,8 +24,12 @@ def report_to_done_order(dp_day):
     print(dp_day.name[-8:], '挂单检查')
     print(str(subset.columns.tolist()).replace('\'', '').replace(',', ' ').replace('[', '').replace(']', '').replace('代码', ''))
 
+    # title
     output += dp_day.name[-8:]+' 挂单检查' + '\n'
+    # column meaning
     output += str(subset.columns.tolist()).replace('\'', '').replace(',', ' ').replace('[', '').replace(']', '').replace('代码', '')+'\n'
+
+    # each order
     for row in subset.itertuples(index=False, name=None):
         store, order_num, order_time, seller = row
         order_time = datetime.strptime(order_time, "%Y-%m-%d %H:%M:%S")
