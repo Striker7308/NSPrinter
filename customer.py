@@ -32,15 +32,15 @@ def report_to_done_order(fp):
         print(row)
         if i > 100: break
     print(len(df_filtered))
-    df_filtered.to_excel(dp_xlsx.parent.joinpath('apple_customer.xlsx'), index=False)
+    df_filtered.to_excel(dp_xlsx.parent.joinpath('honor_customer.xlsx'), index=False)
 
     return
 
 def main():
     # report_to_done_order('./imgs/huawei_pura_customer_all.xlsx')
     # report_to_done_order('./imgs/huawei_mate_customer_all.xlsx')
-    # report_to_done_order('./imgs/honor_customer_all.xlsx')
-    report_to_done_order('./imgs/apple_customer_all.xlsx')
+    report_to_done_order('./imgs/honor_customer_all.xlsx')
+    # report_to_done_order('./imgs/apple_customer_all.xlsx')
     return
 
 if __name__ == '__main__':
