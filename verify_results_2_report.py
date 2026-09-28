@@ -3,20 +3,23 @@ import pathlib
 import argparse
 from utils.io import dump_list_txt, load_list_txt
 
-def transfer(orders_dp):
+def gov_transfer(orders_dp):
     orders_dp = pathlib.Path(orders_dp)
     error_list = json.load(open(orders_dp.joinpath('error_list.json'), 'r', encoding='utf-8')) if orders_dp.joinpath('error_list.json').is_file() else {}
     report = []
 
+    report.append(orders_dp.name[-8:]+' 国补检查')
+    report.append('')
     for order_id, status in error_list.items():
         if status != 'check':
-            report.append(str('订单号: '+ order_id))
+            report.append(str('订单号: '+order_id))
             if type(status) == dict:
                 for type_, error_ in status.items():
-                    report.append(str(type_+': '+error_).replace('!=', '不等于'))
+                    report.append(str(type_+': '+error_).replace('!=', '不等于').replace('seller: ', '销售人: '))
             else:
                 report.append(str(status))
             report.append('')
+    report.append('尽快检查国补资料 核实后 私信我')
     dump_list_txt(report, orders_dp.joinpath('report.txt'))
     # json.dump(error_list, open(orders_dp.joinpath('report.txt'), 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
     return
@@ -37,7 +40,7 @@ def main():
     parser.add_argument("--dir", type=str, help="the absolute path that contain orders for a day")
     args = parser.parse_args()
 
-    transfer(args.dir)
+    gov_transfer(args.dir)
 
     # print('verify.py called at', datetime.now())
     return

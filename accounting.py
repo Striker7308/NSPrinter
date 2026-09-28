@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 
 from utils.filepath import find_invoice_fp, find_jiuxun_fp, find_id_fp
 from utils.io import dump_list_txt, load_list_txt
-from invoice import get_invoice, get_invoice_input
+from invoice import get_invoice_input
 from jiuxun_info import get_jiuxun_info, get_product_detail
 from store import load_store_config
 

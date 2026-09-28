@@ -25,12 +25,17 @@ def report_to_done_order(dp_day):
     print('检查时间 ' + str(datetime.now())[:-7])
     print(str(subset.columns.tolist()).replace('\'', '').replace(',', ' ').replace('[', '').replace(']', '').replace('代码', ''))
 
+    # title
     output += dp_day.name[-8:]+' 挂单检查' + '\n'
     output += '检查时间 ' + str(datetime.now())[:-7] + '\n'
     # output += ' 检查时间 ' + str(datetime.now().strptime("%Y-%m-%d %H:%M:%S")) + '\n'
+    # column meaning
     output += str(subset.columns.tolist()).replace('\'', '').replace(',', ' ').replace('[', '').replace(']', '').replace('代码', '')+'\n'
+
+    # each order
     for row in subset.itertuples(index=False, name=None):
         store, order_num, order_time, seller = row
+        '''before 8:30 pm, only check order before 4 pm'''
         order_time = datetime.strptime(order_time, "%Y-%m-%d %H:%M:%S")
         if datetime.now() < today_2050 and order_time > today_16:
             continue
