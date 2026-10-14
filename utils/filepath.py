@@ -44,6 +44,22 @@ def find_phone_fp(dp='./../imgs/10219792（未审核）/'):
         warnings.warn(f'phone img does not exist in {dp}', UserWarning)
     return fp
 
+def find_conf_fp(dp='./../imgs/10219792（未审核）/'):
+    dp = pathlib.Path(dp)
+    fps = dp.glob('3C购新补贴确认书*')
+    fp = next(fps, None)
+    if fp is None:
+        warnings.warn(f'phone img does not exist in {dp}', UserWarning)
+    return fp
+
+def find_combined_fp(dp='./../imgs/10219792（未审核）/'):
+    dp = pathlib.Path(dp)
+    fps = dp.glob('验机激活四码合一照片*')
+    fp = next(fps, None)
+    if fp is None:
+        warnings.warn(f'phone img does not exist in {dp}', UserWarning)
+    return fp
+
 def find_in_progress_order_fp(dp_day):
     dp_day = pathlib.Path(dp_day)
     today_16 = datetime.now().replace(hour=16, minute=0, second=0, microsecond=0)

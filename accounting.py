@@ -76,7 +76,7 @@ def get_invoice_one_company_day(orders_dp):
 
         '''check data match by rule'''
         checking = json.load(open(dp.joinpath('checking.json'), 'r', encoding='utf-8')) if dp.joinpath('checking.json').is_file() else {}
-
+        print(checking)
         '''format output info'''
         invoice_inputs = get_invoice_input(store, jiuxun, id, receipt, checking)
         json.dump(invoice_inputs, open(dp.joinpath('invoice_inputs.json'), 'w', encoding='utf-8'), indent=2, ensure_ascii=False)

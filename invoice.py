@@ -29,7 +29,9 @@ def get_invoice_url(orders_excel_fp):
         urls = order_urls.split('\n')
         # print('>>>>>>>>>')
         # print(urls[-1])
-        orders_invoice_url[str(order_id)] = urls[-1]
+        for url in urls:
+            if url.find('pdf') != -1:
+                orders_invoice_url[str(order_id)] = url
     return orders_invoice_url
 
 
@@ -80,19 +82,19 @@ def extract_invoice(pdf_link):
 
     res = {
         "invoice_code": pat_code.group(1).strip() if pat_code else None,
-        "发票号码": pat_no.group(1).strip() if pat_no else None,
+        "invoice_number": pat_no.group(1).strip() if pat_no else None,
         "invoice_date": pat_date.group(1).strip() if pat_date else None,
-        "销售人": pat_buyer.group(1).strip() if pat_buyer else None,
+        "buyer_name": pat_buyer.group(1).strip() if pat_buyer else None,
         "buyer_id": buyer_id.strip() if buyer_id else None,
-        "联系人": pat_seller.group(1).strip() if pat_seller else None,
-        "证件号码": seller_id.strip() if seller_id else None,
-        "商品名称": pat_item_row.group(1).strip() if pat_item_row else None,
+        "seller_name": pat_seller.group(1).strip() if pat_seller else None,
+        "seller_id": seller_id.strip() if seller_id else None,
+        "good_name": pat_item_row.group(1).strip() if pat_item_row else None,
         "amount_before_tax": pat_amt.group(1).strip() if pat_amt else None,
         "tax": pat_tax.group(1).strip() if pat_tax else None,
-        "实付金额": pat_total.group(1).strip() if pat_total else None,
-        "补贴金额": pat_subsidy.group(1).strip() if pat_subsidy else None,
-        "收银金额": pat_actual_pay.group(1).strip() if pat_actual_pay else None,
-        "联系人电话": pat_phone.group(1).strip() if pat_phone else None,
+        "total_amount": pat_total.group(1).strip() if pat_total else None,
+        "subsidy": pat_subsidy.group(1).strip() if pat_subsidy else None,
+        "actual_payment": pat_actual_pay.group(1).strip() if pat_actual_pay else None,
+        "buyer_phone": pat_phone.group(1).strip() if pat_phone else None,
     }
     return res, txt, full_text
 

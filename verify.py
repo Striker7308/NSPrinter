@@ -1,4 +1,6 @@
 import argparse
+import warnings
+
 import argcomplete
 import json
 import pathlib
@@ -14,7 +16,7 @@ from receipt import get_receipt, get_signature, get_rich_txt_by_Doubao
 from sn import get_sn
 from jiuxun_info import get_jiuxun_info, get_gov_subsidy_order_detail
 from store import load_store_config
-
+from verify_results_2_report import gov_transfer, qrcode99_report
 
 def load_config(config_file="./config/content.json"):
     with open(config_file, 'r', encoding='utf-8') as f:
@@ -70,50 +72,56 @@ def check_customer_info(id, receipt, jiuxun):
     return {
         # '顾客姓名': True if id["姓名"] == receipt["顾客签名"] else {'身份证姓名有误': id["姓名"], '小票签名有误': receipt["顾客签名"]},
         '联系人': True if id['name'] == jiuxun['联系人'] else '身份证照片 ' + id['name'] + ' 与 九讯云联系人 ' + jiuxun['联系人'] + ' 不一致',
-        '身份证(系统自检)': True if len(id['num']) == 18 else '身份证照片公民号'+id['num']+' 不是18位',
-        '身份证(门店上传)': True if id['num'] == jiuxun['证件号码'] else '身份证照片公民号'+id['num']+' 与 门店上传'+jiuxun['证件号码']+' 不一致'
+        # '身份证(系统自检)': True if len(id['num']) == 18 else '身份证照片公民号'+id['num']+' 不是18位',
+        # '身份证(门店上传)': True if id['num'] == jiuxun['证件号码'] else '身份证照片公民号'+id['num']+' 与 门店上传'+jiuxun['证件号码']+' 不一致'
         # '身份证': True if id['num'] == jiuxun['num'] else '身份证照片 '+id['num']+' 与 九讯云公民号 '+jiuxun['num'] + ' 不一致'
     }
 
 
 def check_payment(receipt, jiuxun):
-    print(jiuxun['合同号'][:10])
-    print(receipt['单号'][:10])
     return {
-        '外部订单号': True if receipt['单号'] == jiuxun['合同号'] and jiuxun['合同号'] else "小票外部订单号 "+receipt['单号']+' 与 '+ '九讯云上外部订单号 '+jiuxun['合同号'] + ' 不一致',
-        '实付金额': True if float(receipt['实收']) == float(jiuxun['实付金额']) else "小票总收银 "+str(receipt["实收"])+' 与 '+ '九讯云总收银 '+jiuxun['实付金额'] + ' 不一致',
+        # '外部订单号': True if receipt['单号'] == jiuxun['合同号'] and jiuxun['合同号'] else "小票外部订单号 "+receipt['单号']+' 与 '+ '九讯云上外部订单号 '+jiuxun['合同号'] + ' 不一致',
+        '实付金额': True if float(receipt['实收']) == float(jiuxun['国补收银金额'])+float(jiuxun['补贴金额']) else "小票金额总数 "+str(receipt["实收"])+' 与 '+ '九讯云国补加后返收银 '+jiuxun['实付金额'] + ' 不一致',
         '政府补贴': True if float(receipt['national_saving']) == float(jiuxun['补贴金额']) else "小票国补 "+str(receipt["national_saving"])+' 与 '+ '九讯云国补 '+jiuxun['补贴金额'] + ' 不一致',
         '信用卡优惠': True,
         '实际支付': True if float(receipt['pay'])+float(receipt.get('bank_saving', 0)) == float(jiuxun['国补收银金额']) else '小票上顾客支付 '+str(receipt['pay'])+' + 银行优惠 '+str(receipt.get('bank_saving', '0'))+' 与 '+ '九讯云顾客支付 '+jiuxun['国补收银金额'] + ' 不一致',
     } if len(receipt) > 0 else {'实付金额': '未识别到小票', '政府补贴': '未识别到小票', '信用卡优惠': '未识别到小票', '实际支付': '未识别到小票'}
-
+    # return {}
 
 def check_merchandise_info(phone, receipt, jiuxun):
     ### check SN match
-    match_SN_phone = jiuxun['SN'] == phone['SN']
-    # match_SN_phone = jiuxun['SN'] == phone['SN'].replace('0', 'Q') if not match_SN_phone else match_SN_phone
-    match_SN_phone = jiuxun['SN'] == phone['SN'].replace('Q', '0') if not match_SN_phone else match_SN_phone
-    # match_SN_receipt = jiuxun['SN'] == receipt['phone_info']['SN']
-    match_SN_receipt = True
-
-    ### format error info
-    SN_check = '' if match_SN_phone else '九讯云上SN '+jiuxun['SN']+' 与 手机屏显SN '+phone.get('SN', '')+' 不一致\n'
-    SN_check = SN_check+'' if match_SN_receipt else SN_check+'九讯云上SN ' + jiuxun['SN'] + ' 与 收据小票SN ' + receipt['phone_info']['SN'] + ' 不一致'
-    SN_check = True if match_SN_phone and match_SN_receipt else SN_check
-
-    ### check IMEI1
-    if jiuxun['分类'] == '智能手机':
-        match_IMEI1_phone = jiuxun['序列号'] == phone.get('IMEI1', '')
-        # match_IMEI1_receipt = jiuxun['序列号'] == receipt['phone_info']['IMEI1']
-        match_IMEI1_receipt = True
-        ### format error info
-        IMEI1_check = True if match_IMEI1_phone else '九讯云上IMEI1 ' + jiuxun['序列号'] + ' 与 手机屏显IMEI1 ' + phone.get('IMEI1', '') + ' 不一致\n'
-        IMEI1_check = IMEI1_check if match_IMEI1_receipt else str(IMEI1_check)+'九讯云上IMEI1 ' + jiuxun['序列号'] + ' 与 收据小票IMEI1 ' + receipt['phone_info']['IMEI1'] + ' 不一致'
-        IMEI1_check = True if match_SN_phone and match_IMEI1_receipt else IMEI1_check
-    else: IMEI1_check = True
+    # match_SN_phone = jiuxun['SN'] == phone['SN']
+    # # match_SN_phone = jiuxun['SN'] == phone['SN'].replace('0', 'Q') if not match_SN_phone else match_SN_phone
+    # match_SN_phone = jiuxun['SN'] == phone['SN'].replace('Q', '0') if not match_SN_phone else match_SN_phone
+    # # match_SN_receipt = jiuxun['SN'] == receipt['phone_info']['SN']
+    # match_SN_receipt = True
+    #
+    # ### format error info
+    # SN_check = '' if match_SN_phone else '九讯云上SN '+jiuxun['SN']+' 与 手机屏显SN '+phone.get('SN', '')+' 不一致\n'
+    # SN_check = SN_check+'' if match_SN_receipt else SN_check+'九讯云上SN ' + jiuxun['SN'] + ' 与 收据小票SN ' + receipt['phone_info']['SN'] + ' 不一致'
+    # SN_check = True if match_SN_phone and match_SN_receipt else SN_check
+    #
+    # ### check IMEI1
+    # if jiuxun['分类'] == '智能手机':
+    #     match_IMEI1_phone = jiuxun['序列号'] == phone.get('IMEI1', '')
+    #     # match_IMEI1_receipt = jiuxun['序列号'] == receipt['phone_info']['IMEI1']
+    #     match_IMEI1_receipt = True
+    #     ### format error info
+    #     IMEI1_check = True if match_IMEI1_phone else '九讯云上IMEI1 ' + jiuxun['序列号'] + ' 与 手机屏显IMEI1 ' + phone.get('IMEI1', '') + ' 不一致\n'
+    #     IMEI1_check = IMEI1_check if match_IMEI1_receipt else str(IMEI1_check)+'九讯云上IMEI1 ' + jiuxun['序列号'] + ' 与 收据小票IMEI1 ' + receipt['phone_info']['IMEI1'] + ' 不一致'
+    #     IMEI1_check = True if match_SN_phone and match_IMEI1_receipt else IMEI1_check
+    # else: IMEI1_check = True
+    # return {
+    #     'SN': SN_check,
+    #     'IMEI1': IMEI1_check,
+    #     # 'IMEI2有误': True if phone['IMEI2'] == receipt['phone_info']['IMEI2'] else "手机显示SN-"+phone['IMEI2']+' ?= '+'小票显示SN-'+receipt['phone_info']['IMEI2'],
+    # } if len(phone) > 0 else {'SN': '未识别到机身串码及SN码截屏', 'IMEI1': '未识别到机身串码及SN码截屏'}
     return {
-        'SN': SN_check,
-        'IMEI1': IMEI1_check,
+        # 'SN有误': True if phone['SN'] == receipt['phone_info']['SN'] else "手机显示SN-"+phone['SN']+' 与 '+'小票显示SN-'+receipt['phone_info']['SN'] + ' 不一致',
+        'SN': True if phone.get('SN', '') == jiuxun['SN'] else '手机屏显SN '+phone.get('SN', '')+' 与 九讯云上SN '+jiuxun['SN'] + ' 不一致',
+        # 'IMEI1有误': True if phone['IMEI1'] == receipt['phone_info']['IMEI1'] else "手机显示IMEI1-"+phone['SN']+' ?= '+'小票显示IMEI1-'+receipt['phone_info']['SN'],
+        'IMEI1': True if jiuxun['分类'] != '智能手机' or phone.get('IMEI1', '') == jiuxun['序列号'] else '手机屏显IMEI1 '+phone.get('IMEI1', '')+' 与 九讯云上IMEI1 '+jiuxun['序列号'] + ' 不一致',
+        'IMEI2': True if jiuxun['分类'] != '智能手机' or phone.get('IMEI2', '') == jiuxun['序列号2'] else '手机屏显IMEI2 '+phone.get('IMEI2', '')+' 与 九讯云上IMEI2 '+jiuxun['序列号2'] + ' 不一致',
         # 'IMEI2有误': True if phone['IMEI2'] == receipt['phone_info']['IMEI2'] else "手机显示SN-"+phone['IMEI2']+' ?= '+'小票显示SN-'+receipt['phone_info']['IMEI2'],
     } if len(phone) > 0 else {'SN': '未识别到机身串码及SN码截屏', 'IMEI1': '未识别到机身串码及SN码截屏'}
 
@@ -127,32 +135,40 @@ def check_one_day(day_dp):
     error_list = json.load(open(orders_dp.joinpath('error_list.json'), 'r', encoding='utf-8')) if orders_dp.joinpath('error_list.json').is_file() else {}
     for dp in orders_dp.iterdir():
         order_id = dp.name.split('（')[0]
-        if not dp.is_dir() or error_list.get(order_id, None) == 'check':
-            print(dp, 'check')
-            continue
+        # if not dp.is_dir() or error_list.get(order_id, None) == 'check':
+        #     print(dp, 'check')
+        #     continue
 
         if not dp.is_dir():
             continue
-        if order_id != '10237535':
-            print(dp, 'ignore')
-            continue
+        # if order_id != '10239222':
+        #     print(dp, 'ignore')
+        #     continue
 
         print(dp, 'checking')
 
         try:
+            '''read jiuxun info'''
+            jiuxun_fp = find_jiuxun_fp(dp)
+            jiuxun = get_jiuxun_info(jiuxun_fp)
+            if jiuxun.get('订单状态', '') != '已完成':
+                continue
+
             '''read data multimodality'''
             id, phone, receipt, invoice, jiuxun = get_det(dp)
+            if len(receipt['qrcode']['combined']) == 0:
+                warnings.warn(order_id+' qrcode fail')
 
-            for k in gov_subsidy_order[order_id]:
-                print(k, jiuxun.get(k, '>>>'))
             jiuxun = jiuxun | gov_subsidy_order[order_id]
 
+            # ignore order not finish or refund
             '''check data match by rule'''
+
             checking = check_store_info(store, receipt, jiuxun)
             checking = {**checking, **check_customer_info(id, receipt, jiuxun)}
             checking = {**checking, **check_payment(receipt, jiuxun)}
             checking = {**checking, **check_merchandise_info(phone, receipt, jiuxun)}
-
+            print(checking)
             '''format output info'''
             json.dump(checking, open(str(dp)+'/checking.json', 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
 
@@ -169,6 +185,8 @@ def check_one_day(day_dp):
         print('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
 
     json.dump(error_list, open(orders_dp.joinpath('error_list.json'), 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
+    gov_transfer(orders_dp)
+    qrcode99_report(orders_dp)
     return
 
 

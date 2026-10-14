@@ -54,8 +54,24 @@ def get_gov_subsidy_order_detail(dp_day):
     return gov_subsidy_order
 
 
+def get_jiuxun_json(fp='E:/share/国补订单附件20261002/filelist.json'):
+    j = json.load(open(fp, encoding='utf-8'))
+    jiuxun_json = {}
+    for it in j['data']['list']:
+        # order = it['folderName']  # "10238813（未审核）"
+        order_id = it['folderName'].split('（')[0]
+        jiuxun_json[order_id] = {}
+        for f in it['files']:
+            if f['name'].find('pdf') != -1:
+                jiuxun_json[order_id].update({'发票.pdf': f['url']})
+            jiuxun_json[order_id].update({f['name']: f['url']})
+    return jiuxun_json
+
+
 def main():
-    get_jiuxun_info()
+    jiuxun_json = get_jiuxun_json()
+    print(jiuxun_json)
+    # get_jiuxun_info()
 
 if __name__ == '__main__':
     main()

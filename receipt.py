@@ -11,6 +11,8 @@ from openai import OpenAI
 from PIL import Image, ImageDraw, ImageEnhance
 import numpy as np
 import zxingcpp
+from pyzbar.pyzbar import decode
+from qreader import QReader
 
 from utils.decode import parse_invoice_qr, parse_receipt_qr, decode_qr, decode_qr_opencv
 from utils.geometry import polygon_to_xyxy, transform_polygon, clean_signature_to_binary, resize_for_doubao
@@ -165,8 +167,9 @@ def parse_device_info(text, product_type):
         warnings.warn("product type not found in info")
     return result
 
+
 def get_rich_txt_by_Doubao(img_receipt, product_type=''):
-    flag_debug = True
+    flag_debug = False
     # flag_debug = False
     qrcodes_txt, qrcodes = decode_qr(img_receipt)
 
@@ -238,14 +241,14 @@ def get_rich_txt_by_Doubao(img_receipt, product_type=''):
     receipt_json['phone_info'] = parse_device_info(receipt_json.get('商品', ''), product_type)
 
     '''self-check'''
-    if len(receipt_json['qrcode']['combined']) > 0 and receipt_json['单号'] != receipt_json['qrcode']['combined'][:25]:
-        warnings.warn('小票 二维码解码订单号 与 识别单号 不一致')
-        print('小票自检 二维码解码 外部订单号', receipt_json['qrcode']['combined'])
-        print('小票自检  图片ocr  外部订单号', receipt_json['单号'])
-    elif len(receipt_json['qrcode']['code002026']) > 0 and receipt_json['单号'] != receipt_json['qrcode']['code002026']:
-        warnings.warn('小票 二维码解码订单号 与 识别单号 不一致')
-        print('小票自检 二维码解码 外部订单号', receipt_json['qrcode']['code002026'])
-        print('小票自检  图片ocr  外部订单号', receipt_json['单号'])
+    # if len(receipt_json['qrcode']['combined']) > 0 and receipt_json['单号'] != receipt_json['qrcode']['combined'][:25]:
+    #     warnings.warn('小票 二维码解码订单号 与 识别单号 不一致')
+    #     warnings.warn('小票自检 二维码解码 外部订单号 '+receipt_json['qrcode']['combined'])
+    #     warnings.warn('小票自检  图片ocr  外部订单号 '+ receipt_json['单号'])
+    # elif len(receipt_json['qrcode']['code002026']) > 0 and receipt_json['单号'] != receipt_json['qrcode']['code002026']:
+    #     warnings.warn('小票 二维码解码订单号 与 识别单号 不一致')
+    #     warnings.warn('小票自检 二维码解码 外部订单号 '+ receipt_json['qrcode']['code002026'])
+    #     warnings.warn('小票自检  图片ocr  外部订单号 '+receipt_json['单号'])
     if flag_debug:
         print('商品:')
         print(receipt_json.get('商品', ''))
@@ -399,6 +402,7 @@ def test_receipt_directly_by_doubao():
 
     return
 
+
 def test_receipt_qrcod_and_doubao():
     # print(f"支持的格式: {zxingcpp.barcode_formats_list()}")
 
@@ -437,12 +441,122 @@ def test_receipt_qrcod_and_doubao():
 
     return
 
+def locate_qr(img):
+    cands = zxingcpp.read_barcodes(
+        img,
+        formats=zxingcpp.BarcodeFormat.QRCode,
+        try_rotate= False , try_invert= False , try_downscale= True ,
+        # try_rotate= True , try_invert= True , try_downscale= True ,
+        return_errors= True , # <-- keep detected-but-undecoded codes
+    )
+    return [cand for cand in cands if cand.position.top_left.x != 0]
+    # each c has c.valid (bool), c.error, and c.position (4 corners)
+    # return the largest quad: that's the real whole QR, not a partial one
+    def area ( c ):
+        p = c.position # shoelace formula on the 4 corners
+        pts = [(p.top_left.x,p.top_left.y),(p.top_right.x,p.top_right.y), (p.bottom_right.x,p.bottom_right.y),(p.bottom_left.x,p.bottom_left.y)]
+        return abs ( sum (pts[i][ 0 ]*pts[(i+ 1 )% 4 ][ 1 ] - pts[(i+ 1 )% 4 ][ 0 ]*pts[i][ 1 ] for i in range ( 4 )) / 2 )
+    return max (cands, key=area, default= None )
+
+
+def locate_qr_code():
+    root_dp = 'E:/share/国补订单附件20261004/'
+    root_dp = pathlib.Path(root_dp)
+
+    qr_reader = QReader()
+
+    for dp in root_dp.iterdir():
+        if not dp.is_dir(): continue
+
+        order_id = dp.name.split('（')[0]
+        # if order_id != '10239357':
+        #     print(dp, 'ignore')
+        #     continue
+
+        image_file = dp.joinpath('销售小票及刷卡小票.jpg')
+        print(image_file)
+        # print(image_file.is_file())
+        img = Image.open(image_file)
+        img_ = cv2.imread(image_file)
+        print(img.size)
+        img = np.asarray(img)
+
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        # Preprocess: denoise + adaptive threshold for paper receipt
+        blur = cv2.GaussianBlur(gray, (3, 3), 0)
+        thresh = cv2.adaptiveThreshold(blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 11, 2)
+        # ok, points = cv2.QRCodeDetector().detectMulti(img)
+        qr = locate_qr(img)
+        print(len(qr))
+        print(qr[0].position)
+        print(type(qr[0].position))
+        print(type(qr[0].position.top_left.x))
+        print(type(qr[0].position.top_left.y))
+
+        for cand in qr:
+            pts = cand.position.top_left.x
+            p = cand.position
+            pts = np.asarray([(p.top_left.x, p.top_left.y), (p.top_right.x, p.top_right.y), (p.bottom_right.x, p.bottom_right.y),
+             (p.bottom_left.x, p.bottom_left.y)])
+            cv2.polylines(img_, [pts], isClosed=True, color=(0, 255, 0), thickness=3)
+
+        # if qr:
+        #     p = qr.position
+        #     print("located, valid decode:", qr.valid, "| error:", qr.error)
+        #     print("corners:", (p.top_left.x, p.top_left.y), (p.top_right.x, p.top_right.y),
+        #           (p.bottom_right.x, p.bottom_right.y), (p.bottom_left.x, p.bottom_left.y))
+        # print(ok)
+        # print(len(points))
+
+        # detections = qr_reader.detect_and_decode(image=gray, return_detections=True)
+        # # detections = qr_reader.detect_and_decode(image=img, return_detections=True)
+        # print(len(detections))
+        # print(len(detections[0]))
+        # print(detections[0])
+        # print(len(detections[1]))
+        # print(len(detections[1][0]))
+        # print(detections[1][0].keys())
+        # print(detections[1][0]['quad_xy'])
+        #
+        # quad_xy = detections[1][0]['quad_xy']
+        # bbox_xyxy = detections[1][0]['bbox_xyxy']
+        # # for det_tuple in detections:
+        # #     print(len(det_tuple))
+        # #     print(det_tuple[0])
+        #     # print(det_tuple[0]['bbox_xyxy'])
+        #     # print(det_tuple)
+        #     # qr_text, det_info = det_tuple
+        #     # print("QR text:", qr_text)
+        #     # print("QR quad corners:", det_info["quad"])
+        #     # print("Confidence:", det_info["confidence"])
+        #
+        # pts_int = bbox_xyxy.astype(np.int32).reshape((-1, 1, 2))
+        # cv2.polylines(img_, [pts_int], isClosed=True, color=(0, 255, 0), thickness=3)
+        #
+        # for idx, (x, y) in enumerate(quad_xy):
+        #     xi = int(round(x))
+        #     yi = int(round(y))
+        #     # 画圆点标记
+        #     cv2.circle(img_, (xi, yi), radius=20, color=(0, 0, 255), thickness=2)
+        #     # 写数字
+        #     cv2.putText(img_, f"{idx}", (xi + 12, yi - 8),
+        #                 cv2.FONT_HERSHEY_SIMPLEX,
+        #                 fontScale=10,
+        #                 color=(255, 0, 0),
+        #                 thickness=2)
+        #
+        # # 保存图片
+        cv2.imwrite('./qr_quad_marked_'+order_id+'.png', img_)
+
+    return
+
 
 def main():
     print('Hello World')
     # test_signature()
     # test_receipt_directly_by_doubao()
-    test_receipt_qrcod_and_doubao()
+    locate_qr_code()
+    # test_receipt_qrcod_and_doubao()
     # phone_info = parse_device_info('华为畅享90ProMax8GB+256GB曜金黑双卡全网通版[SN:6UNBB26429295358,IMEI_1:864910089395938,IMEI_2:864910089435932,型号:CHZ-AL00]')
     # print(phone_info)
 

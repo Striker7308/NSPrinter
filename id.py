@@ -20,7 +20,7 @@ def get_id(img_fp, flag_debug=False):
         "role": "user",
         "content":
             [{"type": "image_url","image_url": openai_b64},
-            {"type": "text", "text": "这是身份证照片吗，缺失的也算是，是的话，提取姓名,18位身份证号，和地址，以json格式返回，不是的话，直接返回No"}]
+            {"type": "text", "text": "你是严格OCR识别器，如果图是身份证照片（缺失的也算），严格提取姓名,18位身份证号，和地址，以json格式返回，不是身份证的话，直接返回No，temperature=0，严格按要求输出"}]
     }]
 
     extra_body = {
@@ -40,7 +40,7 @@ def get_id(img_fp, flag_debug=False):
     )
     content = completion.choices[0].message.content
     if flag_debug: print(content)
-    if content == 'No': return id_json
+    if content == 'No': return id_json, ''
     try:
         id_det = json.loads(content)
         for k, v in id_det.items():
