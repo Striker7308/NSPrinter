@@ -2,6 +2,8 @@ __pycache__/
 .idea/
 fonts/
 imgs/
+build/
+dist/
 .env
 *.pdf
 *.txt
