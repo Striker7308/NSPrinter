@@ -24,6 +24,12 @@ def simplify_up_excel(up_orders, yun_order):
     up_orders.insert(1, "销售", seller_rejected)
     return up_orders
 
+def simplify_up_record_excel(up_record_excel):
+    up_record_excel = up_record_excel.reset_index()
+    up_record_excel = up_record_excel.loc[:, ['交易时间', '银商订单号', '交易金额']]
+    # yun_excel = yun_excel.loc[:, ['订单号', '销售', '商品SN', '加单时间', '合同号']]
+    return up_record_excel
+
 def simplify_yun_excel(yun_excel):
     yun_excel = yun_excel.reset_index()
     yun_excel = yun_excel.loc[:, ['订单号', '销售', '加单时间', '合同号']]
@@ -89,6 +95,24 @@ def check_audit_id_num(yun_xlsx):
     print('外部订单号位数错误 结束\n')
     return order_audit_id_25dig, order_audit_id_not25_simp
 
+def check_unload_union_pay(up_record_xlsx, up_xlsx, flag_debug=True):
+    if flag_debug: print('num unionpay record ', len(up_record_xlsx), 'num up ', len(up_xlsx))
+    # up_xlsx['updTs'] = pd.to_datetime(up_xlsx['updTs'], format='%Y-%m-%d %H:%M:%S')
+    up_record_xlsx['交易时间'] = pd.to_datetime(up_record_xlsx['交易时间'], format='%Y-%m-%d %H:%M:%S')
+    up_xlsx['dealTime'] = pd.to_datetime(up_xlsx['dealTime'], format='%Y-%m-%d %H:%M:%S')
+
+    '''get yun order not up'''
+    is_up = up_record_xlsx['银商订单号'].isin(up_xlsx.loc[:, 'merchantOrderId'])
+    up_record_match = up_record_xlsx[is_up]
+    up_record_missing = up_record_xlsx[~is_up]
+
+    # t = datetime(2026, 10, 20)
+    t = datetime.today()-timedelta(days=3)
+    up_record_missing = up_record_missing.filter(pd.col('加单时间') < t)
+    up_record_missing = simplify_up_record_excel(up_record_missing)
+
+    return up_record_missing
+
 def check_missing_union_pay(yun_order_25, up_xlsx, flag_debug=True):
     if flag_debug: print('num yun ', len(yun_order_25), 'num up ', len(up_xlsx))
     # up_xlsx['updTs'] = pd.to_datetime(up_xlsx['updTs'], format='%Y-%m-%d %H:%M:%S')
@@ -107,10 +131,10 @@ def check_missing_union_pay(yun_order_25, up_xlsx, flag_debug=True):
 
     if flag_debug:
         print('num yun ', len(is_up))
-        print('未上传银联 '+str(len(yun_missing))+'个 开始')
+        print('九讯云侧未上传银联 '+str(len(yun_missing))+'个 开始')
         print(yun_missing.to_string(index=False, show_dimensions=False))
         # yun_missing.to_excel(writer, sheet_name='九讯云订单对应不到银联')
-        print('未上传银联 结束\n')
+        print('九讯云侧未上传银联 结束\n')
 
     '''get up order not in 9yun'''
     is_yun = up_xlsx['auditOrderId'].isin(yun_order_25['合同号'])
@@ -130,7 +154,7 @@ def check_missing_union_pay(yun_order_25, up_xlsx, flag_debug=True):
         # up_audit_id_missing.to_excel(writer, sheet_name='银联订单对应不到九讯云')
         print('银联上传对应不到九讯云 结束\n')
 
-    return up_audit_id_missing
+    return yun_missing, up_audit_id_missing
 
 def check_missing_union_pay_(yun_order_25, up_order):
     json_keys = list(up_order.keys())
@@ -212,24 +236,32 @@ def gov_sub_order_to_excel(yun_xlsx_fp='E:/share/unionpay_revise/国补订单明
     yun_xlsx = pd.read_excel(pathlib.Path(yun_xlsx_fp), dtype=str,skipfooter=1)
     # yun_xlsx = pd.read_excel(pathlib.Path(fp), dtype=str,skipfooter=1)
     up_xlsx_hengtan = pd.read_excel(pathlib.Path(up_xlsx_fp), sheet_name='records', dtype=str, skipfooter=0, na_filter=False)
+    up_record_xlsx_hengtan = pd.read_excel(pathlib.Path('E:/share/unionpay_revise/银联流水_恒檀.xlsx'), dtype=str, skipfooter=3, na_filter=False)
+
+    bank_id = up_record_xlsx_hengtan.loc[:, '银商订单号']
+    print('bank_id', bank_id)
+
     up_xlsx_hengtan['saleName'] = up_xlsx_hengtan['saleName'].apply(simplify_name)
     print('up_xlsx_hengtan', len(up_xlsx_hengtan))
 
     yun_audit_id_unique_xlsx, dup_rows = check_repeat_audit_id(yun_xlsx)
     order_audit_id_25dig, order_audit_id_not25_simp = check_audit_id_num(yun_audit_id_unique_xlsx)
 
-    up_audit_id_missing = check_missing_union_pay(order_audit_id_25dig, up_xlsx_hengtan)
+    yun_missing, up_audit_id_missing = check_missing_union_pay(order_audit_id_25dig, up_xlsx_hengtan)
+    check_unload_union_pay(up_record_xlsx_hengtan, up_xlsx_hengtan, flag_debug=True)
+    yun_missing, up_audit_id_missing = check_missing_union_pay(order_audit_id_25dig, up_xlsx_hengtan)
 
     up_rejected, up_oot = check_up_rejected_late_order(order_audit_id_25dig, up_xlsx_hengtan)
 
     # gov_subsidy_order_yun_id = yun_xlsx.set_index("订单号").to_dict(orient="index")
     with pd.ExcelWriter(pathlib.Path(out_xlsx_fp)) as writer:
     # with pd.ExcelWriter('E:/share/unionpay_revise/output/国补修正_恒檀.xlsx') as writer:
-        order_audit_id_not25_simp.to_excel(writer, sheet_name='外部订单号错位')
-        dup_rows.to_excel(writer, sheet_name='九讯云外部订单号重复')
-        up_audit_id_missing.to_excel(writer, sheet_name='九讯云订单对应不到银联')
-        up_rejected.to_excel(writer, sheet_name='银联审核不过')
-        up_oot.to_excel(writer, sheet_name='银联审核超时')
+        order_audit_id_not25_simp.to_excel(writer, sheet_name='外部订单号错位', index=False)
+        dup_rows.to_excel(writer, sheet_name='九讯云外部订单号重复', index=False)
+        yun_missing.to_excel(writer, sheet_name='九讯云订单对应不到银联', index=False)
+        up_audit_id_missing.to_excel(writer, sheet_name='银联上传对应不到九讯云', index=False)
+        up_rejected.to_excel(writer, sheet_name='银联审核不过', index=False)
+        up_oot.to_excel(writer, sheet_name='银联审核超时', index=False)
     return
 
 def main():
