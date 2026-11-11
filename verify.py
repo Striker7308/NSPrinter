@@ -75,6 +75,10 @@ def check_customer_info(id, receipt, jiuxun):
         # '身份证(系统自检)': True if len(id['num']) == 18 else '身份证照片公民号'+id['num']+' 不是18位',
         # '身份证(门店上传)': True if id['num'] == jiuxun['证件号码'] else '身份证照片公民号'+id['num']+' 与 门店上传'+jiuxun['证件号码']+' 不一致'
         # '身份证': True if id['num'] == jiuxun['num'] else '身份证照片 '+id['num']+' 与 九讯云公民号 '+jiuxun['num'] + ' 不一致'
+        '收货地址': True if id.get('address', '').find('商洛市商州区') != -1 or jiuxun['收货地址'][-1] != '店' or jiuxun['收货地址'][-1] != '门' else jiuxun['收货地址']+' 收货地址在门店',
+    }, {
+        '身份证号': True if len(id['num']) > 0 and len(id['num']) == 18 else '身份证照片公民号'+id['num']+' 不是18位',
+        '身份证地址': True if len(id['address']) > 0 and id['address'].find('市') == -1 else '',
     }
 
 
@@ -141,7 +145,9 @@ def check_one_day(day_dp):
 
         if not dp.is_dir():
             continue
-        # if order_id != '10239222':
+        # if (order_id != '10239336' and
+        #         order_id != '10239436' and
+        #         order_id != '10239439'):
         #     print(dp, 'ignore')
         #     continue
 
@@ -165,7 +171,7 @@ def check_one_day(day_dp):
             '''check data match by rule'''
 
             checking = check_store_info(store, receipt, jiuxun)
-            checking = {**checking, **check_customer_info(id, receipt, jiuxun)}
+            checking = {**checking, **check_customer_info(id, receipt, jiuxun)[0]}
             checking = {**checking, **check_payment(receipt, jiuxun)}
             checking = {**checking, **check_merchandise_info(phone, receipt, jiuxun)}
             print(checking)

@@ -123,7 +123,15 @@ def get_invoice_input(store, jiuxun, id, receipt, checking):
     ]
 
     remark = '2026 年商洛市数码和智能产品购新, 购买方地址: '
-    remark += store.get(jiuxun['销方公司名称'], {}).get('address', 'xxxxxx九讯云销方公司名称错误xxxxxx')+', '
+    address = id.get('address', '')
+    if len(address) == 0:
+        address = 'xxxxxx身份证未识别xxxxxx'
+    else:
+        if address.find('商洛市商州区') == -1:
+            address = jiuxun['收货地址']
+    remark += address+', '
+
+    # remark += store.get(jiuxun['销方公司名称'], {}).get('address', 'xxxxxx九讯云销方公司名称错误xxxxxx')+', '
     remark += '最终销售价格: '+ (jiuxun['实付金额']+'元, ' if checking['实付金额'] is True else 'xxxxxx实付金额错误xxxxxx, ')
     remark += '享受补贴资金数额: '+str(receipt.get('national_saving', 'xxxxxx小票错误xxxxxx'))+'元, '
     remark += '其他优惠金额: '+ (str(receipt.get('bank_saving', '0.00'))+'元, ' if len(receipt) > 0 else 'xxxxxx小票错误xxxxxx, ')

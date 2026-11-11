@@ -20,7 +20,7 @@ def get_id(img_fp, flag_debug=False):
         "role": "user",
         "content":
             [{"type": "image_url","image_url": openai_b64},
-            {"type": "text", "text": "你是严格OCR识别器，如果图是身份证照片（缺失的也算），严格提取姓名,18位身份证号，和地址，以json格式返回，不是身份证的话，直接返回No，temperature=0，严格按要求输出"}]
+            {"type": "text", "text": "你是严格OCR识别器，如果图是身份证照片（缺失的也算），精准提取姓名,18位身份证号，和地址，以{姓名:'张三',身份证号:'612501199708290014',地址:'商洛市商州区夜村三组'}这种json格式返回，不是身份证的话，直接返回No，temperature=0，严格按要求输出"}]
     }]
 
     extra_body = {
