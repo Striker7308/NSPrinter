@@ -56,6 +56,19 @@ def excel_2_wecom(excel, keyword='九讯云订单号'):
     json_ = excel_to_json(excel)
     return json_to_wecom(json_, keyword)
 
+def sheet_commet():
+    rows = [
+        "POS机订单对应不到银联", "POS机刷卡记录找不到云闪付上传", "",
+        "外部订单号错位", "外部订单号位数不对，或含有字母", "",
+        "九讯云外部订单号重复", "一个外部订单号应只对应一个九讯云订单", "",
+        "九讯云订单对应不到银联", "用九讯云订单的外部订单号找不到云闪付上传", "",
+        "银联上传对应不到九讯云", "用云闪付上传的外部订单号找不到九讯云订单", "",
+        "银联审核不过", "银联审核终审驳回", "",
+        "银联审核超时", "银联审核超过一个月",
+    ]
+    audit_rule_df = pd.DataFrame(rows)
+    return audit_rule_df
+
 # def output_up_json(audit_ids, up_orders):
 #     up_json_keys = ('goodsSn', 'dealTime', 'updTs', 'uploadUserName', 'saleName', 'goodsId')
 #     out_keys = ('SN', '交易时间', '上传时间', '上传人', '销方公司', '商品名称')
@@ -268,6 +281,7 @@ def gov_sub_order_to_excel(yun_xlsx_fp='E:/share/unionpay_revise/国补订单明
         up_audit_id_missing.to_excel(writer, sheet_name='银联上传对应不到九讯云', index=False)
         up_rejected.to_excel(writer, sheet_name='银联审核不过', index=False)
         up_oot.to_excel(writer, sheet_name='银联审核超时', index=False)
+        sheet_commet().to_excel(writer, sheet_name='注释', index=False)
     return
 
 def main():

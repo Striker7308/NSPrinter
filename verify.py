@@ -75,7 +75,7 @@ def check_customer_info(id, receipt, jiuxun):
         # '身份证(系统自检)': True if len(id['num']) == 18 else '身份证照片公民号'+id['num']+' 不是18位',
         # '身份证(门店上传)': True if id['num'] == jiuxun['证件号码'] else '身份证照片公民号'+id['num']+' 与 门店上传'+jiuxun['证件号码']+' 不一致'
         # '身份证': True if id['num'] == jiuxun['num'] else '身份证照片 '+id['num']+' 与 九讯云公民号 '+jiuxun['num'] + ' 不一致'
-        '收货地址': True if id.get('address', '').find('商洛市商州区') != -1 or jiuxun['收货地址'][-1] != '店' or jiuxun['收货地址'][-1] != '门' else jiuxun['收货地址']+' 收货地址在门店',
+        '收货地址': True if id.get('address', '').find('商洛市') != -1 or jiuxun['收货地址'][-1] != '店' or jiuxun['收货地址'][-1] != '门' else jiuxun['收货地址']+' 收货地址在门店',
     }, {
         '身份证号': True if len(id['num']) > 0 and len(id['num']) == 18 else '身份证照片公民号'+id['num']+' 不是18位',
         '身份证地址': True if len(id['address']) > 0 and id['address'].find('市') == -1 else '',
@@ -129,6 +129,37 @@ def check_merchandise_info(phone, receipt, jiuxun):
         # 'IMEI2有误': True if phone['IMEI2'] == receipt['phone_info']['IMEI2'] else "手机显示SN-"+phone['IMEI2']+' ?= '+'小票显示SN-'+receipt['phone_info']['IMEI2'],
     } if len(phone) > 0 else {'SN': '未识别到机身串码及SN码截屏', 'IMEI1': '未识别到机身串码及SN码截屏'}
 
+
+def check_one_order(order_dp, error_list):
+    store = load_store_config()
+    order_dp = pathlib.Path(order_dp)
+    if not order_dp.exists(): return
+    print(order_dp, 'checking')
+    day_dp = pathlib.Path(order_dp).parent
+    gov_subsidy_order = get_gov_subsidy_order_detail(day_dp)
+
+    order_id = order_dp.name.split('（')[0]
+
+    id, phone, receipt, invoice, jiuxun = get_det(order_dp)
+    if len(receipt['qrcode']['combined']) == 0:
+        warnings.warn(order_id + ' qrcode fail')
+
+    jiuxun = jiuxun | gov_subsidy_order[order_id]
+
+    checking = check_store_info(store, receipt, jiuxun)
+    checking = {**checking, **check_customer_info(id, receipt, jiuxun)[0]}
+    checking = {**checking, **check_payment(receipt, jiuxun)}
+    checking = {**checking, **check_merchandise_info(phone, receipt, jiuxun)}
+    print(checking)
+
+    '''format output info'''
+    json.dump(checking, open(str(order_dp) + '/checking.json', 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
+
+    '''format error info'''
+    error_info = {k: v for k, v in checking.items() if v is not True}
+    error_list[jiuxun['订单号']] = 'check' if len(error_info) == 0 else {**{'seller': jiuxun['销售人']}, **error_info}
+
+    return checking
 
 def check_one_day(day_dp):
     orders_dp = pathlib.Path(day_dp)
